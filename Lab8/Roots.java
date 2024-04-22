@@ -44,7 +44,7 @@ public class Roots extends Thread {
           boolean canRun = true;
           while(canRun){
                //List subdirectories and files
-               listSubs(path.peek());
+               listSubs(path.getLast());
 
                //Prompt user to command
                String input = null;
@@ -55,14 +55,15 @@ public class Roots extends Thread {
                System.out.println("4. Quit <qt>");
                input = KeyboardReader.readLine("Please enter a command");
                }
+
                String command = input.substring(0, 2);
                String fileName = null;
+               if(input.length() > 2) fileName = input.substring(3);
                switch (command) {
                     //Change to requested directory
                     case("cd"): 
                          //check for requested file in current directory
-                         if(command.length() > 2) fileName = input.substring(3);
-                         for(File tempFile : path.peek().listFiles()){
+                         for(File tempFile : path.getLast().listFiles()){
                               if(tempFile.getName().equals(fileName)){
                                    //Check if file is a directory, warn if not
                                    if(tempFile.isDirectory()){
@@ -78,11 +79,45 @@ public class Roots extends Thread {
                     //Go up a file in the directory
                     case("rt"):
                          //Return back up path if not at base root '/'
-                         if(path.peek() != root) path.remove();
+                         if(path.getLast() != root) path.removeLast();
                          break;
                     //Execute an executable file
                     case("ex"):
-                         
+                         for(File tempFile : path.getLast().listFiles()){
+                              if(tempFile.getName().equals(fileName)){
+                                   //Check if file is a directory, warn if not
+                                   if(tempFile.canExecute()){
+                                        //Execute file
+
+                                        ProcessBuilder builder = new ProcessBuilder("sh", "-c", "ls"); 
+                                        builder.command(tempFile.getAbsolutePath());
+                                        Process process = null;
+                                        try{
+                                             process = builder.start();
+                                             
+                                             //Read output list
+                                             BufferedReader reader = 
+                                                  new BufferedReader(
+                                                       new InputStreamReader(
+                                                            process.getInputStream()));
+                                             String line = reader.readLine(); 
+                                             while (line != null) { 
+                                                 System.out.println(line);
+                                                 line = reader.readLine();
+                                             } 
+
+                                             //Exiting
+                                             int exitCode = process.waitFor(); 
+                                             System.out.println("\nExited with error code : " + exitCode);
+                                        }catch(IOException ioe){
+                                             ioe.printStackTrace();
+                                        }catch(InterruptedException ie){}
+                                   }else{
+                                        System.out.println("File is not executable");
+                                   }
+                                   break;
+                              }
+                         }
                          break;
                     //Quit program
                     case("qt"):
@@ -103,18 +138,17 @@ public class Roots extends Thread {
 
           int count = 0;
           File[] subs = file.listFiles();
-          System.out.println(subs.length);
-          System.out.println("\u001b[31mCURRENT DIRECTORY: " + file + "\u001b[37m");
+          System.out.println("\u001b[31mCURRENT DIRECTORY: " + file.getName() + "\u001b[37m");
           for (File tempFile : subs) {
                if(count == 5){
                     System.out.println();
                     count = 0;
                } 
-               if (tempFile.isDirectory()) {
+               if (tempFile.isDirectory()) { //Directories listed in red
                     System.out.print("\u001b[31m" + tempFile.getName() + "     \u001b[37m");
-               } else if(tempFile.canExecute()){
+               } else if(tempFile.canExecute()){ //Executables listed in green
                     System.out.print("\u001b[32m" + tempFile.getName() + "     \u001b[37m");
-               } else {
+               } else { //Everything else in white
                     System.out.println(tempFile.getName());
                }
                count++;
