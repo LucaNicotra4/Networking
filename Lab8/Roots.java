@@ -88,7 +88,6 @@ public class Roots extends Thread {
                                    //Check if file is a directory, warn if not
                                    if(tempFile.canExecute()){
                                         //Execute file
-
                                         ProcessBuilder builder = new ProcessBuilder("sh", "-c", "ls"); 
                                         builder.command(tempFile.getAbsolutePath());
                                         Process process = null;
@@ -96,10 +95,7 @@ public class Roots extends Thread {
                                              process = builder.start();
                                              
                                              //Read output list
-                                             BufferedReader reader = 
-                                                  new BufferedReader(
-                                                       new InputStreamReader(
-                                                            process.getInputStream()));
+                                             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                                              String line = reader.readLine(); 
                                              while (line != null) { 
                                                  System.out.println(line);
@@ -126,12 +122,9 @@ public class Roots extends Thread {
                     default:
                          System.out.println("Invalid command");
                          break;
-               }//end of switch statement
-               
-          }
-               
-          
-     }
+               }//end of switch statement    
+          }//end of while
+     }//end of run
 
      public void listSubs(File file){
           if(!file.isDirectory()) return;
@@ -156,6 +149,3 @@ public class Roots extends Thread {
           System.out.println("\n");
      }
 }
-
-// TODO: List executables. Account for user input. Complete the switch statement. Figure out a way to get java to run commands
-// ProcessBuilder class for operating system commands
