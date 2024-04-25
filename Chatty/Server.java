@@ -91,7 +91,7 @@ public class Server extends Thread{
                          System.out.println("Sending \"" + message + "\" to " + receiver);
                          Socket tempSocket = clientMap.get(receiver);
                          writer2 = new PrintWriter(new BufferedWriter(new OutputStreamWriter(tempSocket.getOutputStream())));
-                         writer2.println(clientName + ": " + message);
+                         writer2.println("--INCOMING--" + clientName + ": " + message);
                          writer2.flush();
                     }
                     System.out.println(clientName + " disconnected");
@@ -100,4 +100,5 @@ public class Server extends Thread{
                }
           }//end of run
      }
+
 }
