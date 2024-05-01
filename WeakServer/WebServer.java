@@ -2,6 +2,8 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.nio.charset.*;
 
 public class WebServer {
@@ -69,50 +71,27 @@ class HttpHandler implements Runnable {
             try {
                 
                 File site = new File("/Users/lsnicotra/Desktop/TenBroek/Networking/AssignmentsLabs/WeakServer/site");
-                System.out.println("About to request");
                 File requestedFile = findFile(requestedFileName, site);
-                System.out.println("wait");
                 if(requestedFile == null) throw new FileNotFoundException();
                 System.out.println(requestedFile);
 
                 //Read file if found
-                String html = "";
-                BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(requestedFile)));
-                String line = br.readLine();
-                while(line != null){
-                    html = html.concat(line);
-                    line = br.readLine();
+                if(!requestedFileName.endsWith("jpg")){
+                    
+                        String html = "";
+                        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(requestedFile)));
+                        String line = br.readLine();
+                        while(line != null){
+                            html = html.concat(line + "\n");
+                            line = br.readLine();
+                        }
+                        file = html.getBytes(Charset.forName("UTF-8"));
+                        br.close();
+                    
+                }else{
+                    BufferedImage image = ImageIO.read(requestedFile);
+                    ImageIO.write(image, "jpg", out);
                 }
-                file = html.getBytes(Charset.forName("UTF-8"));
-                br.close();
-
-                // if(fileName.equals("index")){
-                //     for(File tempfile : allFiles){
-                //         String path = tempfile.getPath();
-                //         String name = tempfile.getName();
-                //         System.out.println(path + " / " + name);
-                //         String temp = "<a href=\"" + path + "\">" + name + "</a><br>";
-                //         html = html.concat(temp);
-                //     }
-
-                //     html = html.concat("</body></html>");
-                //     file = html.getBytes(Charset.forName("UTF-8"));
-                // }else {
-                //     for(File tempFile : allFiles){
-                //         if( ("/documents/" + tempFile.getName()).equals(fileName) ){
-                //             System.out.println("In if statement");
-                //             BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(tempFile)));
-                //             html = "";
-                //             String line = br.readLine();
-                //             while(line != null){
-                //                 html = html.concat(line);
-                //                 line = br.readLine();
-                //             }
-                //             file = html.getBytes(Charset.forName("UTF-8"));
-                //             br.close();
-                //         }
-                //     }
-                // }
 
             } catch(Exception nsfe) {
                 System.err.println("FILE NOT FOUND: " + requestedFileName);
@@ -124,17 +103,40 @@ class HttpHandler implements Runnable {
             String mimeType = "text/html";
             if(requestedFileName.endsWith("png")) {
                 mimeType = "image/png";
+            }else if(requestedFileName.endsWith("jpg") || requestedFileName.endsWith("jpeg")){
+                mimeType = "image/jpeg";
+            }else if(requestedFileName.endsWith("js")){
+                mimeType = "text/javascript";
+            }else if(requestedFileName.endsWith("css")){
+                mimeType = "text/css";
+            }else if(requestedFileName.endsWith("woff")){
+                mimeType = "font/woff";
+            }else if(requestedFileName.endsWith("woff2")){
+                mimeType = "font/woff2";
+            }else if(requestedFileName.endsWith("eot")){
+                mimeType = "application/vnd.ms-fontobject";
+            }else if(requestedFileName.endsWith("svg")){
+                mimeType = "image/svg+xml";
+            }else if(requestedFileName.endsWith("ttf")){
+                mimeType = "font/ttf";
+            }else if(requestedFileName.endsWith("otf")){
+                mimeType = "font/otf";
+            }else if(requestedFileName.endsWith("bin")){
+                mimeType = "application/octet-stream";
+            }else if(requestedFileName.endsWith("otf")){
+                mimeType = "font/otf";
             }
             
+            int fileLength = (file == null)? 0 : file.length;
             String header = "HTTP/1.1 " + headerResponse + "\n"
                 + "Server: BCWeb 1.0\n"
                 + "Keep-Alive: timeout=15, max=100\n"
-                + "Content-length: " + file.length + "\n"
+                + "Content-length: " + fileLength + "\n"
                 + "Content-type: " + mimeType + "; charset=UTF-8\n\n";
             byte[] headerArr = header.getBytes(Charset.forName("US-ASCII"));
             out.write(headerArr);
             out.flush();
-            out.write(file);
+            if(file != null) out.write(file);
             out.flush();
 
         } catch(IOException ioe) {
@@ -150,8 +152,16 @@ class HttpHandler implements Runnable {
         File[] allFiles = directory.listFiles();
         String[] pathList = path.split("/"); //split by each directory
         String request = pathList[1];
-        for(String string : pathList) System.out.print(string + " : ");
-
+        
+        //cut off version for font packages
+        if(request.endsWith("?v=4.6.3")){
+            System.out.println("Altering");
+            String[] temp = request.split("\\?");
+            System.out.println("sofdsf");
+            request = temp[0];
+            System.out.println("Altered: " + request);
+        }
+        
         //Removing current directory for recursion
         StringBuffer sb = new StringBuffer();
         for(int i = 1; i < pathList.length; i++) {
@@ -159,7 +169,7 @@ class HttpHandler implements Runnable {
             sb.append("/");
         }
         String currentPath = sb.toString();
-        System.out.println("Current Path: " + currentPath);
+        //System.out.println("Current Path: " + currentPath);
 
         //Search for request in current directory
         for(File file : allFiles){
@@ -175,34 +185,5 @@ class HttpHandler implements Runnable {
         }
         return null; //if no match is found
     }
-
-    // private File findFile(String requestedFileName){
-    //     File site = new File("site");
-    //     File[] allFiles = site.listFiles();
-
-    //     //Find requested file in site folder
-    //     String [] requestParts = requestedFileName.split("/");
-    //     File requestedFile = null;
-    //     Boolean found = false;
-    //     //Search through each level of requestedFileName's path
-    //     for(int i = 0; i < requestParts.length; i++){
-    //         if(requestParts[i].equals("")) continue; //skip blanks
-    //         //Checking each file in 'site' for a match to the partition of the requested File
-    //         for(File tempFile : allFiles){
-    //             System.out.println("\u001b[31mChecking: " + requestParts[i] + " and " + tempFile.getName() + "\u001b[0m");//\u001b[0m
-    //             if(tempFile.getName().equals(requestParts[i])){ //if a match is found
-    //                 if(i == (requestParts.length - 1)){ //if it is exact requested file (not higher up in the pathname)
-    //                     found = true;
-    //                     return tempFile;
-    //                 } else if(tempFile.isDirectory()){ //if needing to go further into directory
-    //                     return findFile();
-    //                 }
-    //                 i++;
-    //                 continue;
-    //             }
-    //         }
-    //     }
-    //     return null;
-    // }
 
 }
