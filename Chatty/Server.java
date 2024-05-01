@@ -7,14 +7,15 @@ import java.net.*;
 public class Server extends Thread{
      public static void main(String[] args){
           final int PORT = 4069;
-          HashMap<String, Socket> clientMap = new HashMap<String, Socket>();
+          ArrayList<String> clientList = new ArrayList<String>(); //Name key, for String message
+          HashMap<String, String> messageMap = new HashMap<String, String>();
           ExecutorService pool = Executors.newFixedThreadPool(1000); //ThreadPool
           ServerSocket serverSocket = null;
 
           try{
                serverSocket = new ServerSocket(PORT);
                while(true){
-                    pool.execute(new ClientConnectionHandler(serverSocket.accept(), clientMap));
+                    pool.execute(new ClientConnectionHandler(serverSocket.accept(), clientList, messageMap));
                }
           }catch(IOException ioe){
                ioe.printStackTrace();
@@ -26,79 +27,95 @@ public class Server extends Thread{
           
      }
 
+     //While handle client input and send client messages from shared array
      private static class ClientConnectionHandler implements Runnable{
           private Socket socket;
-          HashMap<String, Socket> clientMap;
+          ArrayList<String> clientList;
+          HashMap<String, String> messageMap;
           String clientName;
+          String receiverName;
 
-          public ClientConnectionHandler(Socket socket, HashMap<String, Socket> clientMap){
+          public ClientConnectionHandler(Socket socket, ArrayList<String> clientList, HashMap<String, String> messageMap){
                this.socket = socket;
-               this.clientMap = clientMap;
+               this.clientList = clientList;
+               this.messageMap = messageMap;
+               this.clientName = null;
+               this.receiverName = null;
           }
 
           public void run(){
+               BufferedReader reader = null;
+               PrintWriter writer = null;
                try{
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                    PrintWriter writer = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())));                    
-                    PrintWriter writer2 = null;
+                    //Establish connections
+                    reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                    writer = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())));
 
-                    //Accounting for repeated clientName
+                    //Get client name
+                    System.out.println("Waiting for client name");
                     do{
-                         String input = null;
-                         while(input == null){
-                              input = reader.readLine();
+                         //Client asks: What is your name?
+                         while(clientName == null){
+                              clientName = reader.readLine();
                          }
-                         clientName = input;
-                         
-                         //Account for repeated name
-                         if(clientMap.containsKey(clientName)){
+
+                         //Check for repeated clientName
+                         if(clientList.contains(clientName)){
                               writer.println("clientName in use");
                          }else{
-                              writer.println("all good");
+                              writer.println("Valid clientName");
                          }
                          writer.flush();
-                    } while(clientMap.containsKey(clientName));
-
-                    clientMap.put(clientName, socket);
+                    } while(clientList.contains(clientName));
+                    clientList.add(clientName);
 
                     while(socket != null){
-                         /* Ask: Who would you like to send to?
-                         Determining Receiver */
-                         String receiver = null;
-                         System.out.println("Waiting to receive");
+                         //Determine who to send to
+                         System.out.println("Waiting to receive receiverName");
                          do{
-                              receiver = reader.readLine();
-                              if(receiver != null && !clientMap.containsKey(receiver)){
-                                   receiver = null;
-                                   System.out.println("Receiver DNE");
-                                   writer.println("Receiver DNE");
-                                   writer.flush();
-                              }else{
-                                   writer.println("Valid receiver");
-                                   writer.flush();
+                              //Client asks: Who would you like to send to?
+                              receiverName = reader.readLine();
+                              if(receiverName != null){
+                                   if(clientList.contains(receiverName)){
+                                        writer.println("Valid receiverName");
+                                   }else{
+                                        writer.println("Receiver name DNE");
+                                        receiverName = null;
+                                   }
                               }
-                         }while(receiver == null);
-                         System.out.println("Receiver: " + receiver + " / Waiting to receive message");
-
-                         /* Ask: What are the contents of the message?
-                         Determining Message */
+                              writer.flush();
+                         }while(receiverName == null);
+                         
+                         //Determine contents of message
+                         System.out.println("Determining message contents");
                          String message = null;
+                         //Client asks: what would you like to say?
+                         message = reader.readLine();
                          while(message == null){
                               message = reader.readLine();
                          }
+                         
+                         //"Send" message
+                         messageMap.put(receiverName, message);
 
-                         //Sending message to receiver
-                         System.out.println("Sending \"" + message + "\" to " + receiver);
-                         Socket tempSocket = clientMap.get(receiver);
-                         writer2 = new PrintWriter(new BufferedWriter(new OutputStreamWriter(tempSocket.getOutputStream())));
-                         writer2.println("--INCOMING--" + clientName + ": " + message);
-                         writer2.flush();
+                         //Send out received messages to client
+                         writer.println("--Received--");
+                         if(messageMap.containsKey(clientName)){
+                              writer.println(messageMap.get(clientName));
+                              messageMap.remove(clientName);
+                         }
+                         writer.println("--END--");
+                         writer.flush();
                     }
-                    System.out.println(clientName + " disconnected");
                }catch(IOException ioe){
                     ioe.printStackTrace();
+               }finally{
+                    try{
+                         reader.close();
+                         writer.close();
+                         socket.close();
+                    }catch(Exception e){}
                }
           }//end of run
      }
-
 }

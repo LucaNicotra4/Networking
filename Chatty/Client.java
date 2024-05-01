@@ -5,16 +5,15 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.Scanner;
 
 public class Client {
      public static void main(String[] args){
           final int PORT = 4069;
-          Scanner scanner = new Scanner(System.in);
+          // Scanner scanner = new Scanner(System.in);
           System.out.println("Enter hostname: ");
-          String hostName = scanner.nextLine();
+          // String hostName = scanner.nextLine();
+          String hostName = KeyboardReader.readLine();
           Socket socket = null;
 
           try{
@@ -26,90 +25,81 @@ public class Client {
 
           ClientThread thread = new ClientThread(socket);
           thread.start();
-          scanner.close();
+          // scanner.close();
      }
 
      private static class ClientThread extends Thread{
           Socket socket;
+          String clientName;
 
           public ClientThread(Socket socket){
                this.socket = socket;
-          } 
+               this.clientName = null;
+          }
 
           public void run(){
                BufferedReader reader = null;
                PrintWriter writer = null;
-               String clientName = null;
-               Scanner scanner = null;
-               Queue<String> printQueue = new LinkedList<String>();
+               // Scanner scanner = null;
 
                try{
-                    
                     reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                     writer = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())));
-                    scanner = new Scanner(System.in);
+                    // scanner = new Scanner(System.in);
+                    //BufferedReader reader2 = new BufferedReader(new InputStreamReader(System.in));
 
-                    //Sending name to server
-                    System.out.println("Who are you sending to? ");
-                    while(!scanner.hasNextLine()){}
-                    clientName = scanner.nextLine();
-                    System.out.println("we here");
-                    writer.println(clientName);
-                    writer.flush(); 
+                    //Get client name
+                    boolean accepted = false;
+                    // System.out.println("What is your name? ");
+                    // // scanner.useDelimiter(System.lineSeparator());
+                    // // clientName = scanner.nextLine();
+                    // clientName = KeyboardReader.readLine();
                     do{
-
+                         clientName = KeyboardReader.readLine("What is your name? ");
+                         writer.println(clientName);
+                         writer.flush();
                          String input = reader.readLine();
-                         while(input != null) {
-                              if(input.startsWith("--INCOMING--")){
-                                   printQueue.add(input.substring(12));
-                              } else if(input.equals("clientName in use")){
-                                   clientName = null;
-                                   System.out.println("-- Name already in use --");
+                         if(input.equals("Valid clientName")){
+                              accepted = true;
+                         }else{
+                              System.out.println("Name already in use");
+                              System.out.println("What is your name? ");
+                         }
+                         System.out.println("Valid name");
+
+                    }while(!accepted);
+                         boolean canRun = true;
+                         while(canRun){
+                         //Determine who to send to
+                         accepted = false;
+                         do{
+                              String input = KeyboardReader.readLine("Who would you like to send to? ");
+                              writer.println(input);
+                              writer.flush();
+                              input = reader.readLine();
+                              if(input.equals("Valid receiverName")){
+                                   accepted = true;
                               }else{
-                                   System.out.println("Name valid");
+                                   System.out.println("Receiver DNE");
                               }
+                         }while(!accepted);
+
+                         //Determine message to send
+                         String input = KeyboardReader.readLine("What would you like to say? ");
+                         writer.println(clientName + ": " + input);
+                         writer.flush();
+
+                         //Print received
+                         input = reader.readLine();
+                         while(!input.equals("--END--")){
+                              System.out.println(input);
                               input = reader.readLine();
                          }
-                    } while(clientName == null);
-
-                    while(true){
-                         //Send Message
-                         String receiver = null;
-                         do{
-                              receiver = KeyboardReader.readLine("Who would you like to send to?");
-                              writer.println(receiver);
-                              writer.flush();
-
-                              String input = reader.readLine();
-                              while(input != null){
-                                   if(input.startsWith("--INCOMING--")) {
-                                        printQueue.add(input.substring(12));
-                                   } else if(input.equals("Receiver DNE")){
-                                        receiver = null;
-                                        System.out.println("Invalid Receiver");
-                                   }
-                                   input = reader.readLine();
-                              }
-                         }while(receiver == null);
-
-                         String message = KeyboardReader.readLine("What would you like to say? ");
-                         writer.println(message);
-                         writer.flush();
-                         System.out.println("Message Sent"); //Good to here
-
-                         //Print received messages
-                         System.out.println("\n--Received--");
-                         for(String str : printQueue){
-                              System.out.println(str);
-                         }
-                         printQueue.clear();
-                         System.out.println();
+                         System.out.println("--END--\n");
                     }
-
                }catch(IOException ioe){
                     ioe.printStackTrace();
                }
           }
      }
-
 }

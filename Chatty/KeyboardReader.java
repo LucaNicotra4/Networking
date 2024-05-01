@@ -238,10 +238,15 @@ public final class KeyboardReader {
 		while(true) {
 			try {
 				System.out.println(prompt);
-				return in.readLine();
+				String input = in.readLine();
+				if(input.length() <= 0) {
+					System.out.println();
+					System.out.println("Please enter some text.");
+				} else {
+					return input;
+				}
 			} catch(Exception e) {
-				System.out.println();
-				System.out.println("Please enter some text.");
+				e.printStackTrace(System.err);
 			}
 		}
 	}
@@ -251,14 +256,15 @@ public final class KeyboardReader {
 	 * @return String
 	 */
 	public static final String readLine() {
-		while(true) {
+		// while(true) {
 			try {
 				return in.readLine();
 			} catch(Exception e) {
-				System.out.println();
+				System.out.println(e.getLocalizedMessage());
 				System.out.println("Please enter something before pressing return.");
 			}
-		}
+		// }
+		return "";
 	}
 
 	/**
