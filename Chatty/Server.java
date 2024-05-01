@@ -4,11 +4,18 @@ import java.util.concurrent.Executors;
 import java.io.*;
 import java.net.*;
 
+/*
+ * Serverside of remote chat program
+ * To be used with Client class
+ * 
+ * By Luca Nicotra
+ * @LucaNicotra4
+ */
 public class Server extends Thread{
      public static void main(String[] args){
           final int PORT = 4069;
-          ArrayList<String> clientList = new ArrayList<String>(); //Name key, for String message
-          HashMap<String, String> messageMap = new HashMap<String, String>();
+          ArrayList<String> clientList = new ArrayList<String>(); 
+          HashMap<String, ArrayList<String>> messageMap = new HashMap<String, ArrayList<String>>();
           ExecutorService pool = Executors.newFixedThreadPool(1000); //ThreadPool
           ServerSocket serverSocket = null;
 
@@ -31,11 +38,11 @@ public class Server extends Thread{
      private static class ClientConnectionHandler implements Runnable{
           private Socket socket;
           ArrayList<String> clientList;
-          HashMap<String, String> messageMap;
+          HashMap<String, ArrayList<String>> messageMap;
           String clientName;
           String receiverName;
 
-          public ClientConnectionHandler(Socket socket, ArrayList<String> clientList, HashMap<String, String> messageMap){
+          public ClientConnectionHandler(Socket socket, ArrayList<String> clientList, HashMap<String, ArrayList<String>> messageMap){
                this.socket = socket;
                this.clientList = clientList;
                this.messageMap = messageMap;
@@ -68,6 +75,7 @@ public class Server extends Thread{
                          writer.flush();
                     } while(clientList.contains(clientName));
                     clientList.add(clientName);
+                    messageMap.put(clientName, new ArrayList<String>());
 
                     while(socket != null){
                          //Determine who to send to
@@ -95,18 +103,22 @@ public class Server extends Thread{
                               message = reader.readLine();
                          }
                          
-                         //"Send" message
-                         messageMap.put(receiverName, message);
+                         //"Send" message by adding to arraylist with key of clientName
+                         messageMap.get(receiverName).add(message);
 
                          //Send out received messages to client
                          writer.println("--Received--");
                          if(messageMap.containsKey(clientName)){
-                              writer.println(messageMap.get(clientName));
-                              messageMap.remove(clientName);
+                              ArrayList<String> temp = messageMap.get(clientName);
+                              for(String string : temp){
+                                   writer.println(string);
+                              }
+                              temp.clear();
                          }
                          writer.println("--END--");
                          writer.flush();
-                    }
+                    }//end of while loop
+                    System.out.println(clientName + " closed");
                }catch(IOException ioe){
                     ioe.printStackTrace();
                }finally{

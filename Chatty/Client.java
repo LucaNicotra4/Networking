@@ -5,14 +5,18 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.Scanner;
 
+/*
+ * Client side of remote chat program
+ * To be used with Server class
+ * 
+ * By Luca Nicotra
+ * @LucaNicotra4
+ */
 public class Client {
      public static void main(String[] args){
           final int PORT = 4069;
-          // Scanner scanner = new Scanner(System.in);
           System.out.println("Enter hostname: ");
-          // String hostName = scanner.nextLine();
           String hostName = KeyboardReader.readLine();
           Socket socket = null;
 
@@ -25,7 +29,6 @@ public class Client {
 
           ClientThread thread = new ClientThread(socket);
           thread.start();
-          // scanner.close();
      }
 
      private static class ClientThread extends Thread{
@@ -40,20 +43,13 @@ public class Client {
           public void run(){
                BufferedReader reader = null;
                PrintWriter writer = null;
-               // Scanner scanner = null;
 
                try{
                     reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                     writer = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())));
-                    // scanner = new Scanner(System.in);
-                    //BufferedReader reader2 = new BufferedReader(new InputStreamReader(System.in));
 
                     //Get client name
                     boolean accepted = false;
-                    // System.out.println("What is your name? ");
-                    // // scanner.useDelimiter(System.lineSeparator());
-                    // // clientName = scanner.nextLine();
-                    // clientName = KeyboardReader.readLine();
                     do{
                          clientName = KeyboardReader.readLine("What is your name? ");
                          writer.println(clientName);
@@ -68,8 +64,10 @@ public class Client {
                          System.out.println("Valid name");
 
                     }while(!accepted);
-                         boolean canRun = true;
-                         while(canRun){
+
+                    //Loop for repeatedly prompting for new messages to send and receive
+                    boolean canRun = true;
+                    while(canRun){
                          //Determine who to send to
                          accepted = false;
                          do{
@@ -91,7 +89,7 @@ public class Client {
 
                          //Print received
                          input = reader.readLine();
-                         while(!input.equals("--END--")){
+                         while(input != null && !input.equals("--END--")){
                               System.out.println(input);
                               input = reader.readLine();
                          }
